@@ -28,7 +28,7 @@ interface Post {
 }
 
 const HomePage: React.FC = () => {
-  const { isGirl, isBoy } = useTheme();
+  const { isGirl } = useTheme();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'reels' | 'profile'>('home');
   const [showCreateModal, setShowCreateModal] = useState(false);
 

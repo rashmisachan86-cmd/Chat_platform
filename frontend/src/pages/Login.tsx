@@ -8,7 +8,6 @@ import { ArrowLeft, User, Lock, ArrowRight, Zap, Eye, EyeOff, Sparkles } from 'l
 import { useAuth } from '../hooks/use-auth';
 
 const Login: React.FC = () => {
-  const navigate = useNavigate();
   const { isGirl, isBoy } = useTheme();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
