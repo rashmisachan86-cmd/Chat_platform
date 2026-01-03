@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { FiSearch, FiUserPlus, FiLoader } from 'react-icons/fi';
+import { MessageSquare } from 'lucide-react';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -106,7 +107,7 @@ export function UserSearchModal({ onChatCreated }: { onChatCreated: (convId: str
                                             onClick={() => startChat(user._id)}
                                             className="p-2 rounded-xl bg-white/5 text-purple-400 opacity-0 group-hover:opacity-100 hover:bg-purple-500 hover:text-white transition-all"
                                         >
-                                            <FiMessageSquare size={18} />
+                                            <MessageSquare size={18} />
                                         </button>
                                     </motion.div>
                                 ))}

@@ -22,7 +22,7 @@ export function useAuth() {
         }
     };
 
-    const signup = async (username: string, email: string | undefined, password: string) => {
+    const signup = async (username: string, _email: string | undefined, password: string) => {
         setIsLoading(true);
         setError(null);
         try {

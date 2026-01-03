@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 import {
-  MessageCircle, Users, Video, Image, Heart, Send, Star,
-  Sparkles, Zap, Shield, Globe, Smile, Camera, Music, TrendingUp
+  MessageCircle, Users, Video, Image, Heart, Sparkles,
+  Shield, Camera, Music
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isGirl, isBoy } = useTheme();
+  const { isGirl } = useTheme();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 300], [1, 0]);

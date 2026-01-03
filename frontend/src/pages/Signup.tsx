@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 import Mascot from '../components/Mascot';
@@ -8,7 +8,6 @@ import { ArrowLeft, User, Lock, ShieldCheck, ArrowRight, Target, Eye, EyeOff, Sp
 import { useAuth } from '../hooks/use-auth';
 
 const Signup: React.FC = () => {
-  const navigate = useNavigate();
   const { isGirl, isBoy } = useTheme();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');

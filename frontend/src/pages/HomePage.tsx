@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 import {
   Home, Search, PlusSquare, Heart, MessageCircle, Send, Bookmark,
-  MoreHorizontal, Play, Camera, Settings, User, TrendingUp, Globe,
-  Film, Music, Smile, Image as ImageIcon, X, ChevronLeft, ChevronRight
+  MoreHorizontal, Camera, Settings, User, Film, Smile,
+  X, Image as ImageIcon
 } from 'lucide-react';
 
 interface Story {
