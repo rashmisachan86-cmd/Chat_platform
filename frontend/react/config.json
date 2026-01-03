@@ -1,0 +1,20 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "src": "src/pages/Welcome.tsx"
+    },
+    {
+      "path": "/login",
+      "src": "src/pages/Login.tsx"
+    },
+    {
+      "path": "/signup",
+      "src": "src/pages/Signup.tsx"
+    }
+  ],
+  "components": [
+    {"name": "Mascot", "src": "src/components/Mascot.tsx"},
+    {"name": "TechBackground", "src": "src/components/TechBackground.tsx"}
+  ]
+}

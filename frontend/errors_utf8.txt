@@ -1,0 +1,6 @@
+﻿src/components/GroupDetails.tsx(3,13): error TS6133: 'Bell' is declared but its value is never read.
+src/components/GroupDetails.tsx(3,19): error TS6133: 'Shield' is declared but its value is never read.
+src/components/GroupDetails.tsx(3,35): error TS6133: 'Trash2' is declared but its value is never read.
+src/components/ProfileModal.tsx(5,10): error TS1484: 'Vibe' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/ChatPage.tsx(4,38): error TS6133: 'FiMenu' is declared but its value is never read.
+src/pages/ChatPage.tsx(369,39): error TS6133: 'idx' is declared but its value is never read.
