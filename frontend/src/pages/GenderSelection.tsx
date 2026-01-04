@@ -21,7 +21,7 @@ const GenderSelection: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-6">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center safe-p">
       {/* Dynamic Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900">
         <div className="absolute inset-0 opacity-30">
@@ -49,7 +49,7 @@ const GenderSelection: React.FC = () => {
         </div>
       </div>
 
-      <div className="relative z-10 w-full max-w-6xl">
+      <div className="relative z-10 w-full px-6 py-12">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -50 }}
