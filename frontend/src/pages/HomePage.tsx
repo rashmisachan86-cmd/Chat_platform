@@ -142,29 +142,28 @@ const HomePage: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              onClick={() => setActiveTab('notifications')}
               className="relative p-2"
             >
               <Heart className="w-6 h-6 text-foreground" />
-              <span className={`
-                absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center text-white font-bold
-                ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}
-              `}>
-                5
-              </span>
             </motion.button>
 
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              onClick={() => setActiveTab('messages')}
               className="relative p-2"
             >
               <MessageCircle className="w-6 h-6 text-foreground" />
-              <span className={`
-                absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs flex items-center justify-center text-white font-bold
-                ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}
-              `}>
-                3
-              </span>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setActiveTab('settings')}
+              className="lg:hidden p-2"
+            >
+              <Settings className="w-6 h-6 text-foreground" />
             </motion.button>
           </div>
         </div>
@@ -539,7 +538,6 @@ const HomePage: React.FC = () => {
             { icon: Home, tab: 'home' as const },
             { icon: Search, tab: 'search' as const },
             { icon: Film, tab: 'reels' as const },
-            { icon: Heart, tab: 'home' as const },
             { icon: User, tab: 'profile' as const },
           ].map((item, index) => (
             <motion.button
