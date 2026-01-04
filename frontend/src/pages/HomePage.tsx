@@ -29,7 +29,7 @@ interface Post {
 
 const HomePage: React.FC = () => {
   const { isGirl } = useTheme();
-  const [activeTab, setActiveTab] = useState<'home' | 'search' | 'reels' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'search' | 'reels' | 'profile' | 'messages' | 'notifications' | 'settings'>('home');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Mock data
@@ -171,8 +171,8 @@ const HomePage: React.FC = () => {
               { icon: Home, label: 'Home', tab: 'home' as const },
               { icon: Search, label: 'Search', tab: 'search' as const },
               { icon: Film, label: 'Reels', tab: 'reels' as const },
-              { icon: MessageCircle, label: 'Messages', tab: 'home' as const },
-              { icon: Heart, label: 'Notifications', tab: 'home' as const },
+              { icon: MessageCircle, label: 'Messages', tab: 'messages' as const },
+              { icon: Heart, label: 'Notifications', tab: 'notifications' as const },
               { icon: PlusSquare, label: 'Create', tab: 'home' as const },
               { icon: User, label: 'Profile', tab: 'profile' as const },
             ].map((item, index) => (
@@ -197,7 +197,14 @@ const HomePage: React.FC = () => {
 
           <motion.button
             whileHover={{ scale: 1.05 }}
-            className="w-full mt-8 flex items-center gap-4 px-4 py-3 rounded-xl text-foreground hover:bg-accent"
+            onClick={() => setActiveTab('settings')}
+            className={`
+              w-full mt-8 flex items-center gap-4 px-4 py-3 rounded-xl transition-colors
+              ${activeTab === 'settings'
+                ? (isGirl ? 'bg-pink-100 text-pink-600' : 'bg-purple-100 text-purple-600')
+                : 'text-foreground hover:bg-accent'
+              }
+            `}
           >
             <Settings className="w-6 h-6" />
             <span className="font-semibold">Settings</span>
@@ -206,152 +213,302 @@ const HomePage: React.FC = () => {
 
         {/* Main Content */}
         <main className="flex-1 max-w-2xl mx-auto pb-20 lg:pb-6">
-          {/* Stories Section */}
-          <div className="px-4 py-6 border-b border-border">
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide">
-              {stories.map((story) => (
-                <motion.div
-                  key={story.id}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex-shrink-0 cursor-pointer"
-                >
-                  <div className={`
-                    w-20 h-20 rounded-full p-1 mb-2
-                    ${story.viewed
-                      ? 'bg-gray-300'
-                      : (isGirl
-                        ? 'bg-gradient-to-tr from-pink-500 via-rose-500 to-orange-500'
-                        : 'bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-500'
-                      )
-                    }
-                  `}>
-                    <div className="w-full h-full rounded-full bg-background flex items-center justify-center text-2xl">
-                      {story.avatar}
+          <AnimatePresence mode="wait">
+            {activeTab === 'home' && (
+              <motion.div
+                key="home"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                {/* Stories Section */}
+                <div className="px-4 py-6 border-b border-border">
+                  <div className="flex gap-4 overflow-x-auto scrollbar-hide">
+                    {stories.map((story) => (
+                      <motion.div
+                        key={story.id}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex-shrink-0 cursor-pointer"
+                      >
+                        <div className={`
+                          w-20 h-20 rounded-full p-1 mb-2
+                          ${story.viewed
+                            ? 'bg-gray-300'
+                            : (isGirl
+                              ? 'bg-gradient-to-tr from-pink-500 via-rose-500 to-orange-500'
+                              : 'bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-500'
+                            )
+                          }
+                        `}>
+                          <div className="w-full h-full rounded-full bg-background flex items-center justify-center text-2xl">
+                            {story.avatar}
+                          </div>
+                        </div>
+                        <p className="text-xs text-center text-muted-foreground truncate w-20">
+                          {story.username}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Posts Feed */}
+                <div className="space-y-6 py-6">
+                  {posts.map((post) => (
+                    <motion.article
+                      key={post.id}
+                      initial={{ opacity: 0, y: 50 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-card rounded-3xl overflow-hidden border border-border"
+                    >
+                      {/* Post Header */}
+                      <div className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`
+                            w-10 h-10 rounded-full flex items-center justify-center text-xl
+                            ${isGirl
+                              ? 'bg-gradient-to-br from-pink-400 to-rose-500'
+                              : 'bg-gradient-to-br from-purple-500 to-indigo-600'
+                            }
+                          `}>
+                            {post.avatar}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">{post.username}</p>
+                            <p className="text-xs text-muted-foreground">{post.timeAgo}</p>
+                          </div>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <MoreHorizontal className="w-6 h-6 text-muted-foreground" />
+                        </motion.button>
+                      </div>
+
+                      {/* Post Image */}
+                      <div className="relative aspect-square bg-muted">
+                        <img
+                          src={post.image}
+                          alt="Post"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+
+                      {/* Post Actions */}
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleLike(post.id)}
+                            >
+                              <Heart
+                                className={`w-7 h-7 ${post.liked ? 'fill-red-500 text-red-500' : 'text-foreground'}`}
+                              />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <MessageCircle className="w-7 h-7 text-foreground" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <Send className="w-7 h-7 text-foreground" />
+                            </motion.button>
+                          </div>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleSave(post.id)}
+                          >
+                            <Bookmark
+                              className={`w-7 h-7 ${post.saved ? 'fill-current text-foreground' : 'text-foreground'}`}
+                            />
+                          </motion.button>
+                        </div>
+
+                        <div>
+                          <p className="font-semibold text-foreground">
+                            {post.likes.toLocaleString()} likes
+                          </p>
+                          <p className="text-foreground mt-1">
+                            <span className="font-semibold">{post.username}</span>{' '}
+                            <span className="text-muted-foreground">{post.caption}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </motion.article>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'search' && (
+              <motion.div
+                key="search"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="p-6"
+              >
+                <div className="relative mb-6">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Search people, tags, places..."
+                    className="w-full bg-accent text-foreground rounded-2xl py-4 pl-12 pr-4 outline-none border-2 border-transparent focus:border-primary/50 transition-all"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[...Array(9)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      whileHover={{ scale: 1.02 }}
+                      className="aspect-square bg-muted rounded-lg overflow-hidden"
+                    >
+                      <img src={`https://picsum.photos/seed/${i + 50}/400`} alt="Search result" className="w-full h-full object-cover" />
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'reels' && (
+              <motion.div
+                key="reels"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                className="h-[80vh] flex items-center justify-center"
+              >
+                <div className="relative w-full max-w-[400px] h-full bg-black rounded-3xl overflow-hidden shadow-2xl">
+                  <img src="https://picsum.photos/seed/reels/400/700" alt="Reel" className="w-full h-full object-cover opacity-80" />
+                  <div className="absolute bottom-8 left-6 text-white">
+                    <p className="font-bold">@creator_name</p>
+                    <p className="text-sm opacity-90">Loving the vibe today! ✨ #lifestyle</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'profile' && (
+              <motion.div
+                key="profile"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="p-6"
+              >
+                <div className="flex items-center gap-8 mb-12">
+                  <div className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-gradient-to-br ${isGirl ? 'from-pink-400 to-rose-500' : 'from-purple-500 to-indigo-600'}`}>
+                    👤
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">rashmi_sachan</h2>
+                    <div className="flex gap-4 text-sm">
+                      <span><strong>12</strong> posts</span>
+                      <span><strong>1.2k</strong> followers</span>
+                      <span><strong>850</strong> following</span>
                     </div>
                   </div>
-                  <p className="text-xs text-center text-muted-foreground truncate w-20">
-                    {story.username}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Posts Feed */}
-          <div className="space-y-6 py-6">
-            {posts.map((post) => (
-              <motion.article
-                key={post.id}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card rounded-3xl overflow-hidden border border-border"
-              >
-                {/* Post Header */}
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`
-                      w-10 h-10 rounded-full flex items-center justify-center text-xl
-                      ${isGirl
-                        ? 'bg-gradient-to-br from-pink-400 to-rose-500'
-                        : 'bg-gradient-to-br from-purple-500 to-indigo-600'
-                      }
-                    `}>
-                      {post.avatar}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden border border-border">
+                      <img src={`https://picsum.photos/seed/profile${i}/400`} alt="Profile post" className="w-full h-full object-cover" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-foreground">{post.username}</p>
-                      <p className="text-xs text-muted-foreground">{post.timeAgo}</p>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'messages' && (
+              <motion.div
+                key="messages"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.1 }}
+                className="p-6"
+              >
+                <h2 className="text-2xl font-bold text-foreground mb-6">Messages</h2>
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border hover:bg-accent transition-colors cursor-pointer">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl">👤</div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground">Friend {i}</p>
+                        <p className="text-sm text-muted-foreground">Hey, how are you?</p>
+                      </div>
+                      <div className="text-xs text-muted-foreground">12:30 PM</div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <motion.div
+                key="notifications"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="p-6"
+              >
+                <h2 className="text-2xl font-bold text-foreground mb-6">Notifications</h2>
+                <div className="space-y-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-accent transition-colors">
+                      <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-500">❤️</div>
+                      <p className="text-sm text-foreground">
+                        <span className="font-bold">user_{i}</span> liked your post.
+                        <span className="text-muted-foreground ml-2">2h</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'settings' && (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 30 }}
+                className="p-6"
+              >
+                <h2 className="text-2xl font-bold text-foreground mb-8">Settings</h2>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-accent/30 rounded-2xl">
+                    <span className="font-medium text-foreground">Dark Mode</span>
+                    <div className="w-12 h-6 bg-primary rounded-full relative">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-accent/30 rounded-2xl">
+                    <span className="font-medium text-foreground">Notifications</span>
+                    <div className="w-12 h-6 bg-primary rounded-full relative">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
                     </div>
                   </div>
                   <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full py-4 bg-destructive/10 text-destructive font-bold rounded-2xl mt-8"
                   >
-                    <MoreHorizontal className="w-6 h-6 text-muted-foreground" />
+                    Log Out
                   </motion.button>
                 </div>
-
-                {/* Post Image */}
-                <div className="relative aspect-square bg-muted">
-                  <img
-                    src={post.image}
-                    alt="Post"
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Double-tap heart animation would go here */}
-                </div>
-
-                {/* Post Actions */}
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => handleLike(post.id)}
-                      >
-                        <Heart
-                          className={`w-7 h-7 ${post.liked ? 'fill-red-500 text-red-500' : 'text-foreground'}`}
-                        />
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <MessageCircle className="w-7 h-7 text-foreground" />
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <Send className="w-7 h-7 text-foreground" />
-                      </motion.button>
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleSave(post.id)}
-                    >
-                      <Bookmark
-                        className={`w-7 h-7 ${post.saved ? 'fill-current text-foreground' : 'text-foreground'}`}
-                      />
-                    </motion.button>
-                  </div>
-
-                  <div>
-                    <p className="font-semibold text-foreground">
-                      {post.likes.toLocaleString()} likes
-                    </p>
-                    <p className="text-foreground mt-1">
-                      <span className="font-semibold">{post.username}</span>{' '}
-                      <span className="text-muted-foreground">{post.caption}</span>
-                    </p>
-                    <button className="text-muted-foreground text-sm mt-2">
-                      View all {post.comments} comments
-                    </button>
-                  </div>
-
-                  {/* Add Comment */}
-                  <div className="flex items-center gap-3 pt-2 border-t border-border">
-                    <Smile className="w-6 h-6 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Add a comment..."
-                      className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground outline-none"
-                    />
-                    <button className={`
-                      font-semibold text-sm
-                      ${isGirl ? 'text-pink-500' : 'text-purple-600'}
-                    `}>
-                      Post
-                    </button>
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
 
         {/* Right Sidebar - Suggestions (Desktop) */}
