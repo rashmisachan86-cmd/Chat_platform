@@ -52,6 +52,9 @@ export function useAuth() {
         }
     };
 
-    return { login, signup, updateProfile, isLoading, error };
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : null;
+
+    return { login, signup, updateProfile, isLoading, error, user };
 }
 

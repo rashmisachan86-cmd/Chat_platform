@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../hooks/use-auth';
+import api from '../lib/api';
 import {
   Home, Search, PlusSquare, Heart, MessageCircle, Send, Bookmark,
   MoreHorizontal, Camera, Settings, User, Film, Smile,
@@ -15,86 +17,91 @@ interface Story {
 }
 
 interface Post {
-  id: number;
-  username: string;
-  avatar: string;
+  _id: string;
+  user: {
+    _id: string;
+    username: string;
+    gender: 'Boy' | 'Girl';
+  };
   image: string;
-  likes: number;
   caption: string;
-  comments: number;
-  timeAgo: string;
-  liked: boolean;
-  saved: boolean;
+  likes: string[];
+  createdAt: string;
 }
 
 const HomePage: React.FC = () => {
   const { isGirl } = useTheme();
+  const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'reels' | 'profile' | 'messages' | 'notifications' | 'settings'>('home');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data
+  // Form states
+  const [newPostImage, setNewPostImage] = useState('');
+  const [newPostCaption, setNewPostCaption] = useState('');
+
+  // Stories - Empty for now since no backend yet
   const stories: Story[] = [
     { id: 1, username: 'Your Story', avatar: '👤', viewed: false },
-    { id: 2, username: 'sarah_j', avatar: '👩', viewed: false },
-    { id: 3, username: 'mike_photo', avatar: '👨', viewed: true },
-    { id: 4, username: 'travel_diary', avatar: '✈️', viewed: false },
-    { id: 5, username: 'foodie_life', avatar: '🍕', viewed: false },
-    { id: 6, username: 'tech_guru', avatar: '💻', viewed: true },
-    { id: 7, username: 'fashion_mode', avatar: '👗', viewed: false },
-    { id: 8, username: 'art_studio', avatar: '🎨', viewed: false },
   ];
 
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: 1,
-      username: 'john_doe',
-      avatar: '👤',
-      image: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba',
-      likes: 1234,
-      caption: 'Amazing sunset at the beach! 🌅 #sunset #beach #photography',
-      comments: 89,
-      timeAgo: '2 hours ago',
-      liked: false,
-      saved: false,
-    },
-    {
-      id: 2,
-      username: 'travel_diary',
-      avatar: '✈️',
-      image: 'https://images.unsplash.com/photo-1682687221363-72518513620e',
-      likes: 856,
-      caption: 'Exploring the mountains! What an adventure 🏔️',
-      comments: 42,
-      timeAgo: '5 hours ago',
-      liked: true,
-      saved: false,
-    },
-    {
-      id: 3,
-      username: 'foodie_life',
-      avatar: '🍕',
-      image: 'https://images.unsplash.com/photo-1682687220063-4742bd7fd538',
-      likes: 2341,
-      caption: 'Homemade pizza night! Recipe in bio 🍕👨‍🍳',
-      comments: 156,
-      timeAgo: '1 day ago',
-      liked: false,
-      saved: true,
-    },
-  ]);
+  const [posts, setPosts] = useState<Post[]>([]);
 
-  const handleLike = (postId: number) => {
-    setPosts(posts.map(post =>
-      post.id === postId
-        ? { ...post, liked: !post.liked, likes: post.liked ? post.likes - 1 : post.likes + 1 }
-        : post
-    ));
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    try {
+      setIsLoading(true);
+      const { data } = await api.get('/posts');
+      setPosts(data);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSave = (postId: number) => {
-    setPosts(posts.map(post =>
-      post.id === postId ? { ...post, saved: !post.saved } : post
-    ));
+  const handleLike = async (postId: string) => {
+    try {
+      const { data } = await api.post(`/posts/${postId}/like`);
+      setPosts(prev => prev.map(post => 
+        post._id === postId 
+          ? { 
+              ...post, 
+              likes: data.liked 
+                ? [...post.likes, currentUser?._id || ''] 
+                : post.likes.filter(id => id !== currentUser?._id) 
+            } 
+          : post
+      ));
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostImage) return;
+
+    try {
+      const { data } = await api.post('/posts', {
+        image: newPostImage,
+        caption: newPostCaption
+      });
+      setPosts([data, ...posts]);
+      setShowCreateModal(false);
+      setNewPostImage('');
+      setNewPostCaption('');
+    } catch (error) {
+      console.error('Error creating post:', error);
+    }
+  };
+
+  const handleSave = (postId: string) => {
+    // Save functionality can be added to backend later
+    console.log('Save post:', postId);
   };
 
   return (
@@ -256,9 +263,28 @@ const HomePage: React.FC = () => {
 
                 {/* Posts Feed */}
                 <div className="space-y-6 py-6">
-                  {posts.map((post) => (
+                  {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <p>Fetching original content...</p>
+                    </div>
+                  ) : posts.length === 0 ? (
+                    <div className="text-center py-12 px-6 bg-card rounded-3xl border border-dashed border-border">
+                      <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">📭</div>
+                      <h3 className="text-xl font-bold text-foreground mb-2">No Posts Yet</h3>
+                      <p className="text-muted-foreground mb-6">Be the first to share something with the world!</p>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setShowCreateModal(true)}
+                        className={`px-8 py-3 rounded-2xl font-bold text-white ${isGirl ? 'bg-pink-500 shadow-pink-500/20' : 'bg-purple-600 shadow-purple-600/20'} shadow-lg`}
+                      >
+                        Create Post
+                      </motion.button>
+                    </div>
+                  ) : posts.map((post) => (
                     <motion.article
-                      key={post.id}
+                      key={post._id}
                       initial={{ opacity: 0, y: 50 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="bg-card rounded-3xl overflow-hidden border border-border"
@@ -268,16 +294,16 @@ const HomePage: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <div className={`
                             w-10 h-10 rounded-full flex items-center justify-center text-xl
-                            ${isGirl
+                            ${post.user.gender === 'Girl'
                               ? 'bg-gradient-to-br from-pink-400 to-rose-500'
                               : 'bg-gradient-to-br from-purple-500 to-indigo-600'
                             }
                           `}>
-                            {post.avatar}
+                            {post.user.gender === 'Girl' ? '👩' : '👨'}
                           </div>
                           <div>
-                            <p className="font-semibold text-foreground">{post.username}</p>
-                            <p className="text-xs text-muted-foreground">{post.timeAgo}</p>
+                            <p className="font-semibold text-foreground">{post.user.username}</p>
+                            <p className="text-xs text-muted-foreground">{new Date(post.createdAt).toLocaleDateString()}</p>
                           </div>
                         </div>
                         <motion.button
@@ -304,10 +330,10 @@ const HomePage: React.FC = () => {
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={() => handleLike(post.id)}
+                              onClick={() => handleLike(post._id)}
                             >
                               <Heart
-                                className={`w-7 h-7 ${post.liked ? 'fill-red-500 text-red-500' : 'text-foreground'}`}
+                                className={`w-7 h-7 ${post.likes.includes(currentUser?._id) ? 'fill-red-500 text-red-500' : 'text-foreground'}`}
                               />
                             </motion.button>
                             <motion.button
@@ -326,20 +352,20 @@ const HomePage: React.FC = () => {
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => handleSave(post.id)}
+                            onClick={() => handleSave(post._id)}
                           >
                             <Bookmark
-                              className={`w-7 h-7 ${post.saved ? 'fill-current text-foreground' : 'text-foreground'}`}
+                              className={`w-7 h-7 text-foreground`}
                             />
                           </motion.button>
                         </div>
 
                         <div>
                           <p className="font-semibold text-foreground">
-                            {post.likes.toLocaleString()} likes
+                            {post.likes.length.toLocaleString()} likes
                           </p>
                           <p className="text-foreground mt-1">
-                            <span className="font-semibold">{post.username}</span>{' '}
+                            <span className="font-semibold">{post.user.username}</span>{' '}
                             <span className="text-muted-foreground">{post.caption}</span>
                           </p>
                         </div>
@@ -366,16 +392,9 @@ const HomePage: React.FC = () => {
                     className="w-full bg-accent text-foreground rounded-2xl py-4 pl-12 pr-4 outline-none border-2 border-transparent focus:border-primary/50 transition-all"
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[...Array(9)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      whileHover={{ scale: 1.02 }}
-                      className="aspect-square bg-muted rounded-lg overflow-hidden"
-                    >
-                      <img src={`https://picsum.photos/seed/${i + 50}/400`} alt="Search result" className="w-full h-full object-cover" />
-                    </motion.div>
-                  ))}
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                  <div className="text-5xl mb-4">🔍</div>
+                  <p>Search for friends and posts</p>
                 </div>
               </motion.div>
             )}
@@ -408,24 +427,29 @@ const HomePage: React.FC = () => {
               >
                 <div className="flex items-center gap-8 mb-12">
                   <div className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-gradient-to-br ${isGirl ? 'from-pink-400 to-rose-500' : 'from-purple-500 to-indigo-600'}`}>
-                    👤
+                    {currentUser?.gender === 'Girl' ? '👩' : '👨'}
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">rashmi_sachan</h2>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">{currentUser?.username || 'Guest'}</h2>
                     <div className="flex gap-4 text-sm">
-                      <span><strong>12</strong> posts</span>
-                      <span><strong>1.2k</strong> followers</span>
-                      <span><strong>850</strong> following</span>
+                      <span><strong>{posts.filter(p => p.user._id === currentUser?._id).length}</strong> posts</span>
+                      <span><strong>0</strong> followers</span>
+                      <span><strong>0</strong> following</span>
                     </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden border border-border">
-                      <img src={`https://picsum.photos/seed/profile${i}/400`} alt="Profile post" className="w-full h-full object-cover" />
+                  {posts.filter(p => p.user._id === currentUser?._id).map((post) => (
+                    <div key={post._id} className="aspect-square bg-muted rounded-lg overflow-hidden border border-border">
+                      <img src={post.image} alt="Profile post" className="w-full h-full object-cover" />
                     </div>
                   ))}
                 </div>
+                {posts.filter(p => p.user._id === currentUser?._id).length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p>You haven't posted anything yet.</p>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -438,17 +462,10 @@ const HomePage: React.FC = () => {
                 className="p-6"
               >
                 <h2 className="text-2xl font-bold text-foreground mb-6">Messages</h2>
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border hover:bg-accent transition-colors cursor-pointer">
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl">👤</div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-foreground">Friend {i}</p>
-                        <p className="text-sm text-muted-foreground">Hey, how are you?</p>
-                      </div>
-                      <div className="text-xs text-muted-foreground">12:30 PM</div>
-                    </div>
-                  ))}
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-card rounded-3xl border border-border">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-3xl">💬</div>
+                  <p className="font-semibold">No active chats</p>
+                  <p className="text-sm">Go to search to find friends and start chatting!</p>
                 </div>
               </motion.div>
             )}
@@ -462,16 +479,9 @@ const HomePage: React.FC = () => {
                 className="p-6"
               >
                 <h2 className="text-2xl font-bold text-foreground mb-6">Notifications</h2>
-                <div className="space-y-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-accent transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-500">❤️</div>
-                      <p className="text-sm text-foreground">
-                        <span className="font-bold">user_{i}</span> liked your post.
-                        <span className="text-muted-foreground ml-2">2h</span>
-                      </p>
-                    </div>
-                  ))}
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                  <div className="text-5xl mb-4">🔔</div>
+                  <p>You're all caught up!</p>
                 </div>
               </motion.div>
             )}
@@ -514,39 +524,9 @@ const HomePage: React.FC = () => {
         {/* Right Sidebar - Suggestions (Desktop) */}
         <aside className="hidden xl:block w-80 sticky top-20 h-screen p-6">
           <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold text-muted-foreground mb-4">Suggestions For You</h3>
-              <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`
-                        w-10 h-10 rounded-full flex items-center justify-center text-xl
-                        ${isGirl
-                          ? 'bg-gradient-to-br from-pink-400 to-rose-500'
-                          : 'bg-gradient-to-br from-purple-500 to-indigo-600'
-                        }
-                      `}>
-                        👤
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm text-foreground">user_{i}</p>
-                        <p className="text-xs text-muted-foreground">Followed by sarah_j</p>
-                      </div>
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`
-                        text-sm font-semibold
-                        ${isGirl ? 'text-pink-500' : 'text-purple-600'}
-                      `}
-                    >
-                      Follow
-                    </motion.button>
-                  </div>
-                ))}
-              </div>
+            <div className="bg-card p-6 rounded-3xl border border-border">
+              <h3 className="font-semibold text-muted-foreground mb-4">God X Community</h3>
+              <p className="text-sm text-muted-foreground">Welcome to the startup! As more people join, you'll see them here.</p>
             </div>
           </div>
         </aside>
@@ -608,55 +588,43 @@ const HomePage: React.FC = () => {
                 </motion.button>
               </div>
 
-              <div className="p-6 space-y-4">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`
-                    w-full p-6 rounded-2xl border-2 border-dashed transition-colors
-                    ${isGirl
-                      ? 'border-pink-300 hover:border-pink-500 hover:bg-pink-50'
-                      : 'border-purple-300 hover:border-purple-500 hover:bg-purple-50/10'
-                    }
-                  `}
-                >
-                  <ImageIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="font-semibold text-foreground">Upload Photo</p>
-                  <p className="text-sm text-muted-foreground mt-1">JPG, PNG up to 10MB</p>
-                </motion.button>
+              <form onSubmit={handleCreatePost} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Image URL</label>
+                  <input
+                    type="text"
+                    value={newPostImage}
+                    onChange={(e) => setNewPostImage(e.target.value)}
+                    placeholder="Paste an image link here..."
+                    className="w-full bg-accent text-foreground rounded-xl py-3 px-4 outline-none border-2 border-transparent focus:border-primary/50 transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Caption</label>
+                  <textarea
+                    value={newPostCaption}
+                    onChange={(e) => setNewPostCaption(e.target.value)}
+                    placeholder="Write a caption..."
+                    className="w-full bg-accent text-foreground rounded-xl py-3 px-4 outline-none border-2 border-transparent focus:border-primary/50 transition-all h-24 resize-none"
+                  />
+                </div>
+                
+                {newPostImage && (
+                  <div className="aspect-square rounded-2xl overflow-hidden border border-border">
+                    <img src={newPostImage} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
 
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`
-                    w-full p-6 rounded-2xl border-2 border-dashed transition-colors
-                    ${isGirl
-                      ? 'border-pink-300 hover:border-pink-500 hover:bg-pink-50'
-                      : 'border-purple-300 hover:border-purple-500 hover:bg-purple-50/10'
-                    }
-                  `}
+                  type="submit"
+                  className={`w-full py-4 rounded-xl font-bold text-white transition-all ${isGirl ? 'bg-pink-500 shadow-pink-500/20' : 'bg-purple-600 shadow-purple-600/20'} shadow-lg`}
                 >
-                  <Film className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="font-semibold text-foreground">Upload Video</p>
-                  <p className="text-sm text-muted-foreground mt-1">MP4 up to 100MB</p>
+                  Share Post
                 </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`
-                    w-full p-6 rounded-2xl border-2 border-dashed transition-colors
-                    ${isGirl
-                      ? 'border-pink-300 hover:border-pink-500 hover:bg-pink-50'
-                      : 'border-purple-300 hover:border-purple-500 hover:bg-purple-50/10'
-                    }
-                  `}
-                >
-                  <Camera className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="font-semibold text-foreground">Take Photo</p>
-                  <p className="text-sm text-muted-foreground mt-1">Use your camera</p>
-                </motion.button>
-              </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
