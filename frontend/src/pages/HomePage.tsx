@@ -98,7 +98,7 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background transition-colors duration-700">
+    <div className="min-h-screen bg-background safe-p transition-colors duration-700">
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
