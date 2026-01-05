@@ -10,24 +10,31 @@ const generateToken = (id: string) => {
 // @route   POST /api/auth/signup
 export const signup = async (req: Request, res: Response) => {
     const { username, password, gender } = req.body;
+    console.log(`📝 Signup attempt: ${username}`);
 
     try {
         const userExists = await User.findOne({ username });
         if (userExists) {
+            console.log(`⚠️ Signup failed: User ${username} already exists`);
             return res.status(400).json({ message: 'User already exists' });
         }
 
         const user = await User.create({ username, password, gender });
         if (user) {
+            console.log(`✅ User created: ${username}`);
             res.status(201).json({
                 _id: user._id,
                 username: user.username,
                 gender: user.gender,
                 profilePic: user.profilePic,
+                bio: user.bio,
+                followers: user.followers,
+                following: user.following,
                 token: generateToken(user._id.toString())
             });
         }
     } catch (error: any) {
+        console.error(`❌ Signup error: ${error.message}`);
         res.status(500).json({ message: error.message });
     }
 };
