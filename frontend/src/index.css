@@ -169,21 +169,31 @@
     @apply border-border outline-ring/50;
   }
 
-  html, body, #root {
+  html {
     width: 100%;
-    min-height: 100dvh;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
-    overflow-y: auto;
-    background-color: var(--background);
   }
 
   body {
     @apply bg-background text-foreground font-sans transition-colors duration-700 ease-out;
+    width: 100%;
     min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    display: block;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100dvh;
+    display: block;
+    position: relative;
   }
 }
 

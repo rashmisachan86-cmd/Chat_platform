@@ -1,4 +1,5 @@
 ﻿import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { ThemeProvider } from './context/ThemeContext'
 import { AnimatePresence, motion } from 'framer-motion'
 import GenderSelection from './pages/GenderSelection'
@@ -19,7 +20,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => (
     animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
     exit={{ opacity: 0, scale: 1.02, filter: 'blur(10px)' }}
     transition={{ duration: 0.4, ease: "easeOut" }}
-    className="w-full min-h-full"
+    className="w-full min-h-screen"
   >
     {children}
   </motion.div>
@@ -27,6 +28,11 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => (
 
 const AnimatedRoutes = () => {
   const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
