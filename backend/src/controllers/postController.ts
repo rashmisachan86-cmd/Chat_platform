@@ -18,7 +18,7 @@ export const createPost = async (req: Request, res: Response) => {
             caption
         });
         
-        const populatedPost = await post.populate('user', 'username gender');
+        const populatedPost = await post.populate('user', 'username gender profilePic');
         res.status(201).json(populatedPost);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -30,7 +30,7 @@ export const createPost = async (req: Request, res: Response) => {
 export const getPosts = async (req: Request, res: Response) => {
     try {
         const posts = await Post.find()
-            .populate('user', 'username gender')
+            .populate('user', 'username gender profilePic')
             .sort({ createdAt: -1 });
         res.json(posts);
     } catch (error: any) {

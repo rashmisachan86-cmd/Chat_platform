@@ -22,6 +22,8 @@ export const signup = async (req: Request, res: Response) => {
             res.status(201).json({
                 _id: user._id,
                 username: user.username,
+                gender: user.gender,
+                profilePic: user.profilePic,
                 token: generateToken(user._id.toString())
             });
         }
@@ -42,6 +44,7 @@ export const login = async (req: Request, res: Response) => {
                 _id: user._id,
                 username: user.username,
                 gender: user.gender,
+                profilePic: user.profilePic,
                 token: generateToken(user._id.toString())
             });
         } else {
@@ -56,7 +59,7 @@ export const login = async (req: Request, res: Response) => {
 // @route   PUT /api/auth/profile
 export const updateProfile = async (req: Request, res: Response) => {
     const userId = (req as any).user?._id;
-    const { gender, vibe, accentColor, chatWallpaper, soundsEnabled } = req.body;
+    const { gender, vibe, accentColor, chatWallpaper, soundsEnabled, profilePic } = req.body;
 
     try {
         const user = await User.findById(userId);
@@ -66,6 +69,7 @@ export const updateProfile = async (req: Request, res: Response) => {
             if (accentColor) user.accentColor = accentColor;
             if (chatWallpaper !== undefined) user.chatWallpaper = chatWallpaper;
             if (soundsEnabled !== undefined) user.soundsEnabled = soundsEnabled;
+            if (profilePic !== undefined) user.profilePic = profilePic;
 
             const updatedUser = await user.save();
             res.json({
@@ -76,6 +80,7 @@ export const updateProfile = async (req: Request, res: Response) => {
                 accentColor: updatedUser.accentColor,
                 chatWallpaper: updatedUser.chatWallpaper,
                 soundsEnabled: updatedUser.soundsEnabled,
+                profilePic: updatedUser.profilePic,
                 token: generateToken(updatedUser._id.toString())
             });
         } else {
@@ -96,7 +101,7 @@ export const searchUsers = async (req: Request, res: Response) => {
             username: { $regex: search, $options: 'i' },
             _id: { $ne: userId }
         })
-            .select('username gender vibe accentColor')
+            .select('username gender vibe accentColor profilePic')
             .limit(10);
 
         res.json(users);

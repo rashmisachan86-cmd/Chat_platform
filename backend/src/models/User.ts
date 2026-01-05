@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
     accentColor: { type: String, default: '#8B5CF6' },
     chatWallpaper: { type: String, default: 'dots' },
     soundsEnabled: { type: Boolean, default: true },
+    profilePic: { type: String, default: '' },
     lastActive: { type: Date, default: Date.now }
 }, { timestamps: true });
 

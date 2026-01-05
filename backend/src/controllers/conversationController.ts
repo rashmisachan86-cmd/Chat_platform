@@ -38,7 +38,9 @@ export const getConversations = async (req: Request, res: Response) => {
     try {
         const conversations = await Conversation.find({
             participants: { $in: [userId] }
-        }).sort({ updatedAt: -1 });
+        })
+            .populate('participants', 'username gender profilePic')
+            .sort({ updatedAt: -1 });
         res.json(conversations);
     } catch (error: any) {
         res.status(500).json({ message: error.message });

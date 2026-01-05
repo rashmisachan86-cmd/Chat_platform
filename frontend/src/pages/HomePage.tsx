@@ -6,7 +6,7 @@ import api from '../lib/api';
 import {
   Home, Search, PlusSquare, Heart, MessageCircle, Send, Bookmark,
   MoreHorizontal, Settings, User, Film,
-  X
+  X, Upload, Camera
 } from 'lucide-react';
 
 interface Post {
@@ -15,6 +15,7 @@ interface Post {
     _id: string;
     username: string;
     gender: 'Boy' | 'Girl';
+    profilePic?: string;
   };
   image: string;
   caption: string;
@@ -22,9 +23,27 @@ interface Post {
   createdAt: string;
 }
 
+const Avatar = ({ user, className = "w-10 h-10" }: { user: any, className?: string }) => {
+  const { isGirl } = useTheme();
+  
+  if (user?.profilePic) {
+    return (
+      <div className={`${className} rounded-full overflow-hidden border border-border flex-shrink-0 bg-muted`}>
+        <img src={user.profilePic} alt={user.username} className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${user?.gender === 'Girl' ? 'from-pink-400 to-rose-500' : 'from-purple-500 to-indigo-600'}`}>
+      <User className="w-1/2 h-1/2 text-white" />
+    </div>
+  );
+};
+
 const HomePage: React.FC = () => {
   const { isGirl } = useTheme();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'reels' | 'profile' | 'messages' | 'notifications' | 'settings'>('home');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -338,15 +357,7 @@ const HomePage: React.FC = () => {
                       {/* Post Header */}
                       <div className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-3">
-                          <div className={`
-                            w-10 h-10 rounded-full flex items-center justify-center text-xl
-                            ${post.user.gender === 'Girl'
-                              ? 'bg-gradient-to-br from-pink-400 to-rose-500'
-                              : 'bg-gradient-to-br from-purple-500 to-indigo-600'
-                            }
-                          `}>
-                            {post.user.gender === 'Girl' ? '👩' : '👨'}
-                          </div>
+                          <Avatar user={post.user} className="w-10 h-10" />
                           <div>
                             <p className="font-semibold text-foreground">{post.user.username}</p>
                             <p className="text-xs text-muted-foreground">{new Date(post.createdAt).toLocaleDateString()}</p>
@@ -455,9 +466,7 @@ const HomePage: React.FC = () => {
                         className="flex items-center justify-between p-4 bg-card rounded-2xl border border-border"
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${user.gender === 'Girl' ? 'bg-pink-100' : 'bg-purple-100'}`}>
-                            {user.gender === 'Girl' ? '👩' : '👨'}
-                          </div>
+                          <Avatar user={user} className="w-12 h-12" />
                           <div>
                             <p className="font-bold text-foreground">{user.username}</p>
                             <p className="text-xs text-muted-foreground">{user.gender} • {user.vibe || 'Friendly'}</p>
@@ -512,8 +521,32 @@ const HomePage: React.FC = () => {
                 className="p-6"
               >
                 <div className="flex items-center gap-8 mb-12">
-                  <div className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-gradient-to-br ${isGirl ? 'from-pink-400 to-rose-500' : 'from-purple-500 to-indigo-600'}`}>
-                    {currentUser?.gender === 'Girl' ? '👩' : '👨'}
+                  <div className="relative group">
+                    <Avatar user={currentUser} className="w-24 h-24 text-4xl" />
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer">
+                      <Camera className="w-8 h-8" />
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = async () => {
+                              try {
+                                const base64String = reader.result as string;
+                                await updateProfile({ profilePic: base64String });
+                                window.location.reload(); // Refresh to update user context
+                              } catch (error) {
+                                console.error('Error updating profile pic:', error);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-foreground mb-2">{currentUser?.username || 'Guest'}</h2>
@@ -561,24 +594,27 @@ const HomePage: React.FC = () => {
 
                 <div className="space-y-4 overflow-y-auto max-h-[70vh] scrollbar-hide">
                   {conversations.length > 0 ? (
-                    conversations.map((conv) => (
-                      <motion.div
-                        key={conv._id}
-                        whileHover={{ x: 5 }}
-                        className="flex items-center gap-4 p-4 bg-card rounded-3xl border border-border cursor-pointer hover:bg-accent/30 transition-all"
-                      >
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-3xl bg-muted`}>
-                          {conv.isGroup ? '👥' : '👤'}
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                          <h3 className="font-bold text-foreground truncate">{conv.title}</h3>
-                          <p className="text-sm text-muted-foreground truncate">{conv.lastMessage || 'No messages yet'}</p>
-                        </div>
-                        <div className="text-[10px] text-muted-foreground whitespace-nowrap">
-                          {new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </motion.div>
-                    ))
+                    conversations.map((conv) => {
+                      const otherUser = conv.isGroup ? null : conv.participants?.find((p: any) => p._id !== currentUser?._id);
+                      const displayTitle = conv.isGroup ? conv.title : (otherUser?.username || conv.title);
+
+                      return (
+                        <motion.div
+                          key={conv._id}
+                          whileHover={{ x: 5 }}
+                          className="flex items-center gap-4 p-4 bg-card rounded-3xl border border-border cursor-pointer hover:bg-accent/30 transition-all"
+                        >
+                          <Avatar user={otherUser || { gender: 'Boy' }} className="w-14 h-14" />
+                          <div className="flex-1 overflow-hidden">
+                            <h3 className="font-bold text-foreground truncate">{displayTitle}</h3>
+                            <p className="text-sm text-muted-foreground truncate">{conv.lastMessage || 'No messages yet'}</p>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            {new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </motion.div>
+                      );
+                    })
                   ) : (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-card rounded-3xl border border-dashed border-border">
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-3xl">💬</div>
@@ -660,9 +696,7 @@ const HomePage: React.FC = () => {
                   suggestions.map((u) => (
                     <div key={u._id} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${u.gender === 'Girl' ? 'bg-pink-100' : 'bg-purple-100'}`}>
-                          {u.gender === 'Girl' ? '👩' : '👨'}
-                        </div>
+                        <Avatar user={u} className="w-8 h-8" />
                         <p className="text-sm font-semibold text-foreground">{u.username}</p>
                       </div>
                       <button 
@@ -741,16 +775,35 @@ const HomePage: React.FC = () => {
               </div>
 
               <form onSubmit={handleCreatePost} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Image URL</label>
-                  <input
-                    type="text"
-                    value={newPostImage}
-                    onChange={(e) => setNewPostImage(e.target.value)}
-                    placeholder="Paste an image link here..."
-                    className="w-full bg-accent text-foreground rounded-xl py-3 px-4 outline-none border-2 border-transparent focus:border-primary/50 transition-all"
-                    required
-                  />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-muted-foreground">Select Image</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newPostImage}
+                      onChange={(e) => setNewPostImage(e.target.value)}
+                      placeholder="Paste image link or upload..."
+                      className="flex-1 bg-accent text-foreground rounded-xl py-3 px-4 outline-none border-2 border-transparent focus:border-primary/50 transition-all"
+                    />
+                    <label className={`p-3 rounded-xl cursor-pointer flex items-center justify-center text-white ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}`}>
+                      <Upload className="w-6 h-6" />
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setNewPostImage(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-2">Caption</label>
