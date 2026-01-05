@@ -119,7 +119,7 @@ export const toggleFollow = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const isFollowing = user.following.includes(targetId as any);
+        const isFollowing = user.following.some(id => id.toString() === targetId);
 
         if (isFollowing) {
             // Unfollow
@@ -134,7 +134,10 @@ export const toggleFollow = async (req: Request, res: Response) => {
         await user.save();
         await targetUser.save();
 
-        res.json({ following: !isFollowing });
+        res.json({ 
+            following: !isFollowing,
+            userFollowing: user.following 
+        });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

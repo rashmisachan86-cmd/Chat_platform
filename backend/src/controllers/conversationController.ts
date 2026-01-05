@@ -14,7 +14,8 @@ export const createConversation = async (req: Request, res: Response) => {
             const existing = await Conversation.findOne({
                 isGroup: false,
                 participants: { $all: [userId, participantId] }
-            });
+            }).populate('participants', 'username gender profilePic');
+            
             if (existing) return res.json(existing);
         }
 
@@ -24,7 +25,8 @@ export const createConversation = async (req: Request, res: Response) => {
             participants: isGroup ? [userId, ...participantId] : [userId, participantId]
         });
 
-        res.status(201).json(newConversation);
+        const populatedConversation = await newConversation.populate('participants', 'username gender profilePic');
+        res.status(201).json(populatedConversation);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

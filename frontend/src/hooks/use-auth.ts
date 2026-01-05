@@ -52,9 +52,17 @@ export function useAuth() {
         }
     };
 
+    const refreshUser = (updatedData: any) => {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const newUser = { ...currentUser, ...updatedData };
+        localStorage.setItem('user', JSON.stringify(newUser));
+        // We might want to trigger a state update here if we used a real state for 'user'
+        // But since we derive 'user' from localStorage on every render, this works if the component re-renders
+    };
+
     const userString = localStorage.getItem('user');
     const user = userString ? JSON.parse(userString) : null;
 
-    return { login, signup, updateProfile, isLoading, error, user };
+    return { login, signup, updateProfile, refreshUser, isLoading, error, user };
 }
 

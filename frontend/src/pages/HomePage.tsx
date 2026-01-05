@@ -6,7 +6,7 @@ import api from '../lib/api';
 import {
   Home, Search, PlusSquare, Heart, MessageCircle, Send, Bookmark,
   MoreHorizontal, Settings, User, Film,
-  X, Upload, Camera
+  X, Upload, Camera, ArrowLeft
 } from 'lucide-react';
 
 interface Post {
@@ -51,7 +51,7 @@ const Avatar = ({ user, className = "w-10 h-10" }: { user: any, className?: stri
 
 const HomePage: React.FC = () => {
   const { isGirl } = useTheme();
-  const { user: currentUser, updateProfile } = useAuth();
+  const { user: currentUser, updateProfile, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'reels' | 'profile' | 'messages' | 'notifications' | 'settings'>('home');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +62,13 @@ const HomePage: React.FC = () => {
   const [commentTexts, setCommentTexts] = useState<{[key: string]: string}>({});
   const [editingBio, setEditingBio] = useState(false);
   const [newBio, setNewBio] = useState(currentUser?.bio || '');
+
+  // Message states
+  const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessageText, setNewMessageText] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,6 +104,51 @@ const HomePage: React.FC = () => {
     }
   };
 
+  const fetchMessages = async (conversationId: string) => {
+    try {
+      const { data } = await api.get(`/messages/${conversationId}`);
+      setMessages(data);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newMessageText.trim() || !selectedConversation || isSendingMessage) return;
+
+    try {
+      setIsSendingMessage(true);
+      const { data } = await api.post('/messages', {
+        conversationId: selectedConversation._id,
+        text: newMessageText,
+        type: 'text'
+      });
+      setMessages([...messages, { ...data, from: currentUser }]);
+      setNewMessageText('');
+      fetchConversations(); // Update last message in list
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation._id);
+    }
+  }, [selectedConversation]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+
   const fetchSuggestions = async () => {
     try {
       const { data } = await api.get('/auth/users?search=');
@@ -126,8 +178,8 @@ const HomePage: React.FC = () => {
 
   const startConversation = async (participantId: string) => {
     try {
-      await api.post('/conversations', { participantId, isGroup: false });
-      // In a real app we would navigate to /chat/:id, but for now we'll just switch to messages tab
+      const { data } = await api.post('/conversations', { participantId, isGroup: false });
+      setSelectedConversation(data);
       setActiveTab('messages');
       fetchConversations();
     } catch (error) {
@@ -197,7 +249,8 @@ const HomePage: React.FC = () => {
 
   const handleFollow = async (userId: string) => {
     try {
-      await api.post(`/auth/users/${userId}/follow`);
+      const { data } = await api.post(`/auth/users/${userId}/follow`);
+      refreshUser({ following: data.userFollowing });
       fetchSuggestions();
       // Reload profile if currently viewing it
       if (activeTab === 'profile') {
@@ -711,59 +764,135 @@ const HomePage: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.1 }}
-                className="p-6 h-full"
+                className="h-[80vh] flex flex-col"
               >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-foreground">Messages</h2>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setActiveTab('search')}
-                    className={`p-2 rounded-xl ${isGirl ? 'bg-pink-100 text-pink-600' : 'bg-purple-100 text-purple-600'}`}
-                  >
-                    <PlusSquare className="w-6 h-6" />
-                  </motion.button>
-                </div>
+                {!selectedConversation ? (
+                  <div className="p-6 h-full overflow-y-auto">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-foreground">Messages</h2>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setActiveTab('search')}
+                        className={`p-2 rounded-xl ${isGirl ? 'bg-pink-100 text-pink-600' : 'bg-purple-100 text-purple-600'}`}
+                      >
+                        <PlusSquare className="w-6 h-6" />
+                      </motion.button>
+                    </div>
 
-                <div className="space-y-4 overflow-y-auto max-h-[70vh] scrollbar-hide">
-                  {conversations.length > 0 ? (
-                    conversations.map((conv) => {
-                      const otherUser = conv.isGroup ? null : conv.participants?.find((p: any) => p._id !== currentUser?._id);
-                      const displayTitle = conv.isGroup ? conv.title : (otherUser?.username || conv.title);
+                    <div className="space-y-4">
+                      {conversations.length > 0 ? (
+                        conversations.map((conv) => {
+                          const otherUser = conv.isGroup ? null : conv.participants?.find((p: any) => p._id !== currentUser?._id);
+                          const displayTitle = conv.isGroup ? conv.title : (otherUser?.username || conv.title);
 
-                      return (
-                        <motion.div
-                          key={conv._id}
-                          whileHover={{ x: 5 }}
-                          className="flex items-center gap-4 p-4 bg-card rounded-3xl border border-border cursor-pointer hover:bg-accent/30 transition-all"
-                        >
-                          <Avatar user={otherUser || { gender: 'Boy' }} className="w-14 h-14" />
-                          <div className="flex-1 overflow-hidden">
-                            <h3 className="font-bold text-foreground truncate">{displayTitle}</h3>
-                            <p className="text-sm text-muted-foreground truncate">{conv.lastMessage || 'No messages yet'}</p>
+                          return (
+                            <motion.div
+                              key={conv._id}
+                              whileHover={{ x: 5 }}
+                              onClick={() => setSelectedConversation(conv)}
+                              className="flex items-center gap-4 p-4 bg-card rounded-3xl border border-border cursor-pointer hover:bg-accent/30 transition-all"
+                            >
+                              <Avatar user={otherUser || { gender: 'Boy' }} className="w-14 h-14" />
+                              <div className="flex-1 overflow-hidden">
+                                <h3 className="font-bold text-foreground truncate">{displayTitle}</h3>
+                                <p className="text-sm text-muted-foreground truncate">{conv.lastMessage || 'No messages yet'}</p>
+                              </div>
+                              <div className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                {new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </motion.div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-card rounded-3xl border border-dashed border-border">
+                          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-3xl">💬</div>
+                          <p className="font-semibold">No active chats</p>
+                          <p className="text-sm px-10 text-center">Start a conversation by searching for friends in the search tab!</p>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setActiveTab('search')}
+                            className={`mt-6 px-6 py-2 rounded-xl font-bold text-white ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}`}
+                          >
+                            Find Friends
+                          </motion.button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col bg-card rounded-3xl border border-border overflow-hidden m-4">
+                    {/* Chat Header */}
+                    <div className="p-4 border-b border-border flex items-center gap-4 bg-background/50">
+                      <button 
+                        onClick={() => setSelectedConversation(null)}
+                        className="p-2 hover:bg-accent rounded-full transition-all"
+                      >
+                        <ArrowLeft className="w-6 h-6 text-foreground" />
+                      </button>
+                      <Avatar 
+                        user={selectedConversation.isGroup ? null : selectedConversation.participants?.find((p: any) => p._id !== currentUser?._id)} 
+                        className="w-10 h-10" 
+                      />
+                      <div>
+                        <h3 className="font-bold text-foreground">
+                          {selectedConversation.isGroup ? selectedConversation.title : selectedConversation.participants?.find((p: any) => p._id !== currentUser?._id)?.username}
+                        </h3>
+                        <p className="text-[10px] text-green-500 font-bold">Online</p>
+                      </div>
+                    </div>
+
+                    {/* Messages Area */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                      {messages.map((msg, i) => {
+                        const isMe = msg.from._id === currentUser?._id;
+                        return (
+                          <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`
+                              max-w-[80%] p-4 rounded-2xl text-sm shadow-sm
+                              ${isMe 
+                                ? (isGirl ? 'bg-pink-500 text-white rounded-tr-none' : 'bg-purple-600 text-white rounded-tr-none') 
+                                : 'bg-accent text-foreground rounded-tl-none'}
+                            `}>
+                              <p>{msg.text}</p>
+                              <p className={`text-[8px] mt-1 opacity-70 ${isMe ? 'text-right' : 'text-left'}`}>
+                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-[10px] text-muted-foreground whitespace-nowrap">
-                            {new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </motion.div>
-                      );
-                    })
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-card rounded-3xl border border-dashed border-border">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-3xl">💬</div>
-                      <p className="font-semibold">No active chats</p>
-                      <p className="text-sm px-10 text-center">Start a conversation by searching for friends in the search tab!</p>
+                        );
+                      })}
+                      {messages.length === 0 && (
+                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
+                          <MessageCircle className="w-12 h-12 mb-2" />
+                          <p>No messages yet. Say hi!</p>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Chat Input */}
+                    <form onSubmit={handleSendMessage} className="p-4 bg-background/50 border-t border-border flex gap-2">
+                      <input 
+                        type="text"
+                        value={newMessageText}
+                        onChange={(e) => setNewMessageText(e.target.value)}
+                        placeholder="Type a message..."
+                        className="flex-1 bg-accent rounded-2xl px-4 py-3 text-sm text-foreground outline-none border-2 border-transparent focus:border-primary/30 transition-all"
+                      />
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setActiveTab('search')}
-                        className={`mt-6 px-6 py-2 rounded-xl font-bold text-white ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}`}
+                        type="submit"
+                        disabled={!newMessageText.trim() || isSendingMessage}
+                        className={`p-3 rounded-2xl text-white shadow-lg ${isGirl ? 'bg-pink-500' : 'bg-purple-600'} disabled:opacity-50 transition-all`}
                       >
-                        Find Friends
+                        <Send className="w-6 h-6" />
                       </motion.button>
-                    </div>
-                  )}
-                </div>
+                    </form>
+                  </div>
+                )}
               </motion.div>
             )}
 
