@@ -22,11 +22,11 @@ export function useAuth() {
         }
     };
 
-    const signup = async (username: string, _email: string | undefined, password: string) => {
+    const signup = async (username: string, _email: string | undefined, password: string, gender: string = 'Boy') => {
         setIsLoading(true);
         setError(null);
         try {
-            const { data } = await api.post('/auth/signup', { username, password });
+            const { data } = await api.post('/auth/signup', { username, password, gender });
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data));
             navigate('/home');

@@ -44,7 +44,7 @@ const Signup: React.FC = () => {
       return;
     }
 
-    await signup(username, email || undefined, password);
+    await signup(username, email || undefined, password, isGirl ? 'Girl' : 'Boy');
   };
 
   const error = authError || validationError;

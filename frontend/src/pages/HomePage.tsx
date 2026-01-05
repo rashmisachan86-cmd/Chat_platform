@@ -46,9 +46,16 @@ const HomePage: React.FC = () => {
   ];
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetchPosts();
+    fetchSuggestions();
+    fetchConversations();
   }, []);
 
   const fetchPosts = async () => {
@@ -61,6 +68,59 @@ const HomePage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchConversations = async () => {
+    try {
+      const { data } = await api.get('/conversations');
+      setConversations(data);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    }
+  };
+
+  const fetchSuggestions = async () => {
+    try {
+      const { data } = await api.get('/auth/users?search=');
+      setSuggestions(data.filter((u: any) => u._id !== currentUser?._id).slice(0, 5));
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+    }
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      const { data } = await api.get(`/auth/users?search=${query}`);
+      setSearchResults(data);
+    } catch (error) {
+      console.error('Error searching users:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const startConversation = async (participantId: string) => {
+    try {
+      const { data } = await api.post('/conversations', { participantId, isGroup: false });
+      // In a real app we would navigate to /chat/:id, but for now we'll just switch to messages tab
+      setActiveTab('messages');
+      fetchConversations();
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
   };
 
   const handleLike = async (postId: string) => {
@@ -231,32 +291,31 @@ const HomePage: React.FC = () => {
                 {/* Stories Section */}
                 <div className="px-4 py-6 border-b border-border">
                   <div className="flex gap-4 overflow-x-auto scrollbar-hide">
-                    {stories.map((story) => (
-                      <motion.div
-                        key={story.id}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="flex-shrink-0 cursor-pointer"
-                      >
-                        <div className={`
-                          w-20 h-20 rounded-full p-1 mb-2
-                          ${story.viewed
-                            ? 'bg-gray-300'
-                            : (isGirl
-                              ? 'bg-gradient-to-tr from-pink-500 via-rose-500 to-orange-500'
-                              : 'bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-500'
-                            )
-                          }
-                        `}>
-                          <div className="w-full h-full rounded-full bg-background flex items-center justify-center text-2xl">
-                            {story.avatar}
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="flex-shrink-0 cursor-pointer"
+                    >
+                      <div className={`
+                        w-20 h-20 rounded-full p-1 mb-2
+                        bg-gradient-to-tr from-orange-400 via-pink-500 to-purple-600
+                      `}>
+                        <div className="w-full h-full rounded-full bg-background flex items-center justify-center text-2xl relative">
+                          {currentUser?.gender === 'Girl' ? '👩' : '👨'}
+                          <div className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-0.5 border-2 border-background">
+                            <PlusSquare className="w-4 h-4" />
                           </div>
                         </div>
-                        <p className="text-xs text-center text-muted-foreground truncate w-20">
-                          {story.username}
-                        </p>
-                      </motion.div>
-                    ))}
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground truncate w-20">
+                        Your Story
+                      </p>
+                    </motion.div>
+                    
+                    {/* Placeholder for real stories when available */}
+                    <div className="flex items-center text-xs text-muted-foreground px-4 opacity-50 italic">
+                      More stories coming soon as friends join!
+                    </div>
                   </div>
                 </div>
 
@@ -387,14 +446,56 @@ const HomePage: React.FC = () => {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Search people, tags, places..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    placeholder="Search people by username..."
                     className="w-full bg-accent text-foreground rounded-2xl py-4 pl-12 pr-4 outline-none border-2 border-transparent focus:border-primary/50 transition-all"
                   />
                 </div>
-                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                  <div className="text-5xl mb-4">🔍</div>
-                  <p>Search for friends and posts</p>
-                </div>
+
+                {isSearching ? (
+                  <div className="flex justify-center py-10">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="space-y-4">
+                    {searchResults.map((user) => (
+                      <motion.div
+                        key={user._id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center justify-between p-4 bg-card rounded-2xl border border-border"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${user.gender === 'Girl' ? 'bg-pink-100' : 'bg-purple-100'}`}>
+                            {user.gender === 'Girl' ? '👩' : '👨'}
+                          </div>
+                          <div>
+                            <p className="font-bold text-foreground">{user.username}</p>
+                            <p className="text-xs text-muted-foreground">{user.gender} • {user.vibe || 'Friendly'}</p>
+                          </div>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => startConversation(user._id)}
+                          className={`px-4 py-2 rounded-xl text-sm font-bold text-white ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}`}
+                        >
+                          Message
+                        </motion.button>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : searchQuery ? (
+                  <div className="text-center py-20 text-muted-foreground">
+                    <p>No users found matching "{searchQuery}"</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                    <div className="text-5xl mb-4">🔍</div>
+                    <p>Search for friends and start chatting</p>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -404,15 +505,13 @@ const HomePage: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.05 }}
-                className="h-[80vh] flex items-center justify-center"
+                className="h-[80vh] flex flex-col items-center justify-center p-6 text-center"
               >
-                <div className="relative w-full max-w-[400px] h-full bg-black rounded-3xl overflow-hidden shadow-2xl">
-                  <img src="https://picsum.photos/seed/reels/400/700" alt="Reel" className="w-full h-full object-cover opacity-80" />
-                  <div className="absolute bottom-8 left-6 text-white">
-                    <p className="font-bold">@creator_name</p>
-                    <p className="text-sm opacity-90">Loving the vibe today! ✨ #lifestyle</p>
-                  </div>
-                </div>
+                <div className="text-6xl mb-6">🎥</div>
+                <h2 className="text-3xl font-black text-foreground mb-4">Reels are Coming Soon!</h2>
+                <p className="text-muted-foreground max-w-sm">
+                  We're currently building a world-class short-video experience for God X. Stay tuned for the update!
+                </p>
               </motion.div>
             )}
 
@@ -458,13 +557,55 @@ const HomePage: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.1 }}
-                className="p-6"
+                className="p-6 h-full"
               >
-                <h2 className="text-2xl font-bold text-foreground mb-6">Messages</h2>
-                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-card rounded-3xl border border-border">
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-3xl">💬</div>
-                  <p className="font-semibold">No active chats</p>
-                  <p className="text-sm">Go to search to find friends and start chatting!</p>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-foreground">Messages</h2>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setActiveTab('search')}
+                    className={`p-2 rounded-xl ${isGirl ? 'bg-pink-100 text-pink-600' : 'bg-purple-100 text-purple-600'}`}
+                  >
+                    <PlusSquare className="w-6 h-6" />
+                  </motion.button>
+                </div>
+
+                <div className="space-y-4 overflow-y-auto max-h-[70vh] scrollbar-hide">
+                  {conversations.length > 0 ? (
+                    conversations.map((conv) => (
+                      <motion.div
+                        key={conv._id}
+                        whileHover={{ x: 5 }}
+                        className="flex items-center gap-4 p-4 bg-card rounded-3xl border border-border cursor-pointer hover:bg-accent/30 transition-all"
+                      >
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-3xl bg-muted`}>
+                          {conv.isGroup ? '👥' : '👤'}
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <h3 className="font-bold text-foreground truncate">{conv.title}</h3>
+                          <p className="text-sm text-muted-foreground truncate">{conv.lastMessage || 'No messages yet'}</p>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-card rounded-3xl border border-dashed border-border">
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-3xl">💬</div>
+                      <p className="font-semibold">No active chats</p>
+                      <p className="text-sm px-10 text-center">Start a conversation by searching for friends in the search tab!</p>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setActiveTab('search')}
+                        className={`mt-6 px-6 py-2 rounded-xl font-bold text-white ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}`}
+                      >
+                        Find Friends
+                      </motion.button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -510,6 +651,7 @@ const HomePage: React.FC = () => {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={handleLogout}
                     className="w-full py-4 bg-destructive/10 text-destructive font-bold rounded-2xl mt-8"
                   >
                     Log Out
@@ -524,8 +666,32 @@ const HomePage: React.FC = () => {
         <aside className="hidden xl:block w-80 sticky top-20 h-screen p-6">
           <div className="space-y-6">
             <div className="bg-card p-6 rounded-3xl border border-border">
-              <h3 className="font-semibold text-muted-foreground mb-4">God X Community</h3>
-              <p className="text-sm text-muted-foreground">Welcome to the startup! As more people join, you'll see them here.</p>
+              <h3 className="font-semibold text-muted-foreground mb-4">Suggested for you</h3>
+              <div className="space-y-4">
+                {suggestions.length > 0 ? (
+                  suggestions.map((u) => (
+                    <div key={u._id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${u.gender === 'Girl' ? 'bg-pink-100' : 'bg-purple-100'}`}>
+                          {u.gender === 'Girl' ? '👩' : '👨'}
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">{u.username}</p>
+                      </div>
+                      <button 
+                        onClick={() => setActiveTab('search')}
+                        className={`text-xs font-bold ${isGirl ? 'text-pink-500' : 'text-purple-600'} hover:opacity-70`}
+                      >
+                        View
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">Welcome to God X! New users will appear here soon.</p>
+                )}
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground px-4">
+              © 2026 GOD X FROM PARTH
             </div>
           </div>
         </aside>
