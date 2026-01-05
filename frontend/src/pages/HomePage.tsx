@@ -9,13 +9,6 @@ import {
   X
 } from 'lucide-react';
 
-interface Story {
-  id: number;
-  username: string;
-  avatar: string;
-  viewed: boolean;
-}
-
 interface Post {
   _id: string;
   user: {
