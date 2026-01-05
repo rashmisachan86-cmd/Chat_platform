@@ -5,8 +5,8 @@ import { useAuth } from '../hooks/use-auth';
 import api from '../lib/api';
 import {
   Home, Search, PlusSquare, Heart, MessageCircle, Send, Bookmark,
-  MoreHorizontal, Camera, Settings, User, Film, Smile,
-  X, Image as ImageIcon
+  MoreHorizontal, Settings, User, Film,
+  X
 } from 'lucide-react';
 
 interface Story {
@@ -39,11 +39,6 @@ const HomePage: React.FC = () => {
   // Form states
   const [newPostImage, setNewPostImage] = useState('');
   const [newPostCaption, setNewPostCaption] = useState('');
-
-  // Stories - Empty for now since no backend yet
-  const stories: Story[] = [
-    { id: 1, username: 'Your Story', avatar: '👤', viewed: false },
-  ];
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +103,7 @@ const HomePage: React.FC = () => {
 
   const startConversation = async (participantId: string) => {
     try {
-      const { data } = await api.post('/conversations', { participantId, isGroup: false });
+      await api.post('/conversations', { participantId, isGroup: false });
       // In a real app we would navigate to /chat/:id, but for now we'll just switch to messages tab
       setActiveTab('messages');
       fetchConversations();
