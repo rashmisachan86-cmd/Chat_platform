@@ -10,6 +10,7 @@ import Welcome from './pages/Welcome'
 import NotFound from './pages/NotFound'
 import ChatPage from './pages/ChatPage'
 import CallPage from './pages/CallPage'
+import CursorFollower from './components/CursorFollower'
 import './App.css'
 
 const PageTransition = ({ children }: { children: React.ReactNode }) => (
@@ -47,6 +48,7 @@ const AnimatedRoutes = () => {
 export default function App() {
   return (
     <ThemeProvider>
+      <CursorFollower />
       <AnimatedRoutes />
     </ThemeProvider>
   )

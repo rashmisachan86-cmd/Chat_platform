@@ -10,18 +10,9 @@ import {
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { isGirl } = useTheme();
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 300], [1, 0]);
   const scale = useTransform(scrollY, [0, 300], [1, 0.8]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
 
   const features = [
     { icon: MessageCircle, title: 'Real-time Chat', description: 'Instant messaging with delivery status' },
@@ -43,19 +34,6 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-700">
-      {/* Animated Cursor Follower */}
-      <motion.div
-        className="fixed w-6 h-6 rounded-full pointer-events-none z-50 mix-blend-difference"
-        animate={{
-          x: mousePosition.x - 12,
-          y: mousePosition.y - 12,
-        }}
-        transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-        style={{
-          background: isGirl ? 'rgba(255, 182, 193, 0.8)' : 'rgba(168, 85, 247, 0.8)',
-        }}
-      />
-
       {/* Floating Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {[...Array(20)].map((_, i) => (
