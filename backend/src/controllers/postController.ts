@@ -59,3 +59,32 @@ export const toggleLike = async (req: Request, res: Response) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// @desc    Comment on a post
+// @route   POST /api/posts/:id/comment
+export const commentPost = async (req: Request, res: Response) => {
+    const userId = (req as any).user?._id;
+    const { text } = req.body;
+
+    if (!text) return res.status(400).json({ message: 'Comment text is required' });
+
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        const comment = {
+            user: userId,
+            text,
+            createdAt: new Date()
+        };
+
+        post.comments.push(comment as any);
+        await post.save();
+
+        const populatedPost = await post.populate('comments.user', 'username profilePic gender');
+        res.status(201).json(populatedPost.comments);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+

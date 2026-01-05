@@ -10,6 +10,9 @@ const userSchema = new mongoose.Schema({
     chatWallpaper: { type: String, default: 'dots' },
     soundsEnabled: { type: Boolean, default: true },
     profilePic: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     lastActive: { type: Date, default: Date.now }
 }, { timestamps: true });
 

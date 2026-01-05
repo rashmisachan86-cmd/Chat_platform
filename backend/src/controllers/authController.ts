@@ -59,7 +59,7 @@ export const login = async (req: Request, res: Response) => {
 // @route   PUT /api/auth/profile
 export const updateProfile = async (req: Request, res: Response) => {
     const userId = (req as any).user?._id;
-    const { gender, vibe, accentColor, chatWallpaper, soundsEnabled, profilePic } = req.body;
+    const { gender, vibe, accentColor, chatWallpaper, soundsEnabled, profilePic, bio } = req.body;
 
     try {
         const user = await User.findById(userId);
@@ -70,6 +70,7 @@ export const updateProfile = async (req: Request, res: Response) => {
             if (chatWallpaper !== undefined) user.chatWallpaper = chatWallpaper;
             if (soundsEnabled !== undefined) user.soundsEnabled = soundsEnabled;
             if (profilePic !== undefined) user.profilePic = profilePic;
+            if (bio !== undefined) user.bio = bio;
 
             const updatedUser = await user.save();
             res.json({
@@ -81,6 +82,9 @@ export const updateProfile = async (req: Request, res: Response) => {
                 chatWallpaper: updatedUser.chatWallpaper,
                 soundsEnabled: updatedUser.soundsEnabled,
                 profilePic: updatedUser.profilePic,
+                bio: updatedUser.bio,
+                followers: updatedUser.followers,
+                following: updatedUser.following,
                 token: generateToken(updatedUser._id.toString())
             });
         } else {
@@ -90,6 +94,64 @@ export const updateProfile = async (req: Request, res: Response) => {
         res.status(500).json({ message: error.message });
     }
 };
+// @desc    Follow/Unfollow a user
+// @route   POST /api/auth/users/:id/follow
+export const toggleFollow = async (req: Request, res: Response) => {
+    const userId = (req as any).user?._id;
+    const targetId = req.params.id;
+
+    if (userId.toString() === targetId) {
+        return res.status(400).json({ message: 'You cannot follow yourself' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+        const targetUser = await User.findById(targetId);
+
+        if (!user || !targetUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const isFollowing = user.following.includes(targetId as any);
+
+        if (isFollowing) {
+            // Unfollow
+            user.following = user.following.filter(id => id.toString() !== targetId);
+            targetUser.followers = targetUser.followers.filter(id => id.toString() !== userId.toString());
+        } else {
+            // Follow
+            user.following.push(targetId as any);
+            targetUser.followers.push(userId as any);
+        }
+
+        await user.save();
+        await targetUser.save();
+
+        res.json({ following: !isFollowing });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get user profile by username
+// @route   GET /api/auth/users/:username
+export const getUserProfile = async (req: Request, res: Response) => {
+    try {
+        const user = await User.findOne({ username: req.params.username })
+            .select('-password')
+            .populate('followers', 'username profilePic gender')
+            .populate('following', 'username profilePic gender');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json(user);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Search for users
 // @route   GET /api/auth/users
 export const searchUsers = async (req: Request, res: Response) => {
@@ -109,3 +171,4 @@ export const searchUsers = async (req: Request, res: Response) => {
         res.status(500).json({ message: error.message });
     }
 };
+

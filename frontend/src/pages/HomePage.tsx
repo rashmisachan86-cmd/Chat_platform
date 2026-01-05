@@ -20,12 +20,20 @@ interface Post {
   image: string;
   caption: string;
   likes: string[];
+  comments: Array<{
+    user: {
+      _id: string;
+      username: string;
+      profilePic?: string;
+      gender: 'Boy' | 'Girl';
+    };
+    text: string;
+    createdAt: string;
+  }>;
   createdAt: string;
 }
 
 const Avatar = ({ user, className = "w-10 h-10" }: { user: any, className?: string }) => {
-  const { isGirl } = useTheme();
-  
   if (user?.profilePic) {
     return (
       <div className={`${className} rounded-full overflow-hidden border border-border flex-shrink-0 bg-muted`}>
@@ -51,6 +59,9 @@ const HomePage: React.FC = () => {
   // Form states
   const [newPostImage, setNewPostImage] = useState('');
   const [newPostCaption, setNewPostCaption] = useState('');
+  const [commentTexts, setCommentTexts] = useState<{[key: string]: string}>({});
+  const [editingBio, setEditingBio] = useState(false);
+  const [newBio, setNewBio] = useState(currentUser?.bio || '');
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,6 +181,43 @@ const HomePage: React.FC = () => {
     // Save functionality can be added to backend later
     console.log('Save post:', postId);
   };
+
+  const handleComment = async (postId: string) => {
+    const text = commentTexts[postId];
+    if (!text?.trim()) return;
+
+    try {
+      const { data } = await api.post(`/posts/${postId}/comment`, { text });
+      setPosts(posts.map(p => p._id === postId ? { ...p, comments: data } : p));
+      setCommentTexts({ ...commentTexts, [postId]: '' });
+    } catch (error) {
+      console.error('Error posting comment:', error);
+    }
+  };
+
+  const handleFollow = async (userId: string) => {
+    try {
+      await api.post(`/auth/users/${userId}/follow`);
+      fetchSuggestions();
+      // Reload profile if currently viewing it
+      if (activeTab === 'profile') {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error following user:', error);
+    }
+  };
+
+  const handleUpdateBio = async () => {
+    try {
+      await updateProfile({ bio: newBio });
+      setEditingBio(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating bio:', error);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background safe-p transition-colors duration-700">
@@ -421,10 +469,49 @@ const HomePage: React.FC = () => {
                           <p className="font-semibold text-foreground">
                             {post.likes.length.toLocaleString()} likes
                           </p>
-                          <p className="text-foreground mt-1">
-                            <span className="font-semibold">{post.user.username}</span>{' '}
+                          <p className="text-foreground mt-1 text-sm">
+                            <span className="font-bold">{post.user.username}</span>{' '}
                             <span className="text-muted-foreground">{post.caption}</span>
                           </p>
+
+                          {/* Comments Section */}
+                          {post.comments?.length > 0 && (
+                            <div className="mt-3 space-y-2 border-t border-border pt-3">
+                              {post.comments.slice(-2).map((comment, i) => (
+                                <div key={i} className="flex gap-2 items-start text-xs">
+                                  <Avatar user={comment.user} className="w-5 h-5" />
+                                  <p className="text-foreground">
+                                    <span className="font-bold mr-1">{comment.user.username}</span>
+                                    {comment.text}
+                                  </p>
+                                </div>
+                              ))}
+                              {post.comments.length > 2 && (
+                                <button className="text-[10px] text-muted-foreground font-semibold hover:underline">
+                                  View all {post.comments.length} comments
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Comment Input */}
+                          <div className="mt-4 flex gap-2">
+                            <input 
+                              type="text"
+                              value={commentTexts[post._id] || ''}
+                              onChange={(e) => setCommentTexts({ ...commentTexts, [post._id]: e.target.value })}
+                              placeholder="Add a comment..."
+                              className="flex-1 bg-accent/50 rounded-lg px-3 py-1.5 text-xs text-foreground outline-none border border-transparent focus:border-primary/30 transition-all"
+                              onKeyPress={(e) => e.key === 'Enter' && handleComment(post._id)}
+                            />
+                            <button 
+                              onClick={() => handleComment(post._id)}
+                              disabled={!commentTexts[post._id]?.trim()}
+                              className={`text-xs font-bold ${isGirl ? 'text-pink-500' : 'text-purple-600'} disabled:opacity-30`}
+                            >
+                              Post
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </motion.article>
@@ -475,8 +562,20 @@ const HomePage: React.FC = () => {
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
+                          onClick={() => handleFollow(user._id)}
+                          className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                            currentUser?.following?.includes(user._id)
+                              ? 'border-border text-foreground hover:bg-muted'
+                              : (isGirl ? 'bg-pink-500 border-pink-500 text-white shadow-pink-500/20' : 'bg-purple-600 border-purple-600 text-white shadow-purple-600/20')
+                          } shadow-md`}
+                        >
+                          {currentUser?.following?.includes(user._id) ? 'Following' : 'Follow'}
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={() => startConversation(user._id)}
-                          className={`px-4 py-2 rounded-xl text-sm font-bold text-white ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}`}
+                          className={`px-4 py-2 rounded-xl text-sm font-bold border-2 border-primary/20 hover:border-primary/50 text-foreground transition-all`}
                         >
                           Message
                         </motion.button>
@@ -550,11 +649,45 @@ const HomePage: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-foreground mb-2">{currentUser?.username || 'Guest'}</h2>
-                    <div className="flex gap-4 text-sm">
+                    <div className="flex gap-4 text-sm mb-4">
                       <span><strong>{posts.filter(p => p.user._id === currentUser?._id).length}</strong> posts</span>
-                      <span><strong>0</strong> followers</span>
-                      <span><strong>0</strong> following</span>
+                      <span><strong>{currentUser?.followers?.length || 0}</strong> followers</span>
+                      <span><strong>{currentUser?.following?.length || 0}</strong> following</span>
                     </div>
+                    {editingBio ? (
+                      <div className="space-y-2">
+                        <textarea 
+                          value={newBio}
+                          onChange={(e) => setNewBio(e.target.value)}
+                          className="w-full bg-accent rounded-lg p-2 text-sm text-foreground outline-none border border-primary/30"
+                          placeholder="Tell us about yourself..."
+                        />
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={handleUpdateBio}
+                            className={`px-3 py-1 rounded-lg text-white text-xs font-bold ${isGirl ? 'bg-pink-500' : 'bg-purple-600'}`}
+                          >
+                            Save
+                          </button>
+                          <button 
+                            onClick={() => setEditingBio(false)}
+                            className="px-3 py-1 rounded-lg bg-muted text-foreground text-xs font-bold"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{currentUser?.bio || 'No bio yet'}</p>
+                        <button 
+                          onClick={() => setEditingBio(true)}
+                          className={`text-xs font-bold ${isGirl ? 'text-pink-500' : 'text-purple-600'} hover:opacity-70`}
+                        >
+                          Edit Bio
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -694,17 +827,26 @@ const HomePage: React.FC = () => {
               <div className="space-y-4">
                 {suggestions.length > 0 ? (
                   suggestions.map((u) => (
-                    <div key={u._id} className="flex items-center justify-between">
+                    <div key={u._id} className="flex items-center justify-between group">
                       <div className="flex items-center gap-3">
                         <Avatar user={u} className="w-8 h-8" />
-                        <p className="text-sm font-semibold text-foreground">{u.username}</p>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{u.username}</p>
+                          <p className="text-[10px] text-muted-foreground">{u.vibe}</p>
+                        </div>
                       </div>
-                      <button 
-                        onClick={() => setActiveTab('search')}
-                        className={`text-xs font-bold ${isGirl ? 'text-pink-500' : 'text-purple-600'} hover:opacity-70`}
-                      >
-                        View
-                      </button>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleFollow(u._id)}
+                          className={`text-xs font-bold transition-all ${
+                            currentUser?.following?.includes(u._id)
+                              ? 'text-muted-foreground'
+                              : (isGirl ? 'text-pink-500 hover:text-pink-600' : 'text-purple-600 hover:text-purple-700')
+                          }`}
+                        >
+                          {currentUser?.following?.includes(u._id) ? 'Following' : 'Follow'}
+                        </button>
+                      </div>
                     </div>
                   ))
                 ) : (
